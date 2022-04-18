@@ -82,6 +82,9 @@ void GameScene::Update() {
 	viewProjection_.eye.y += eyeMove.y;
 	viewProjection_.eye.z += eyeMove.z;
 
+	//行列の再計算
+	viewProjection_.UpdateMatrix();
+
 	//注視点移動処理
 	
 	//注視点の移動ベクトル
