@@ -14,9 +14,26 @@
 /// <summary>
 /// ゲームシーン
 /// </summary>
-class GameScene {
+class GameScene 
+{
+  public:
 
-  public: // メンバ関数
+	//パーツID
+	enum PartID 
+	{
+		Root, // 大元
+		Spine,// 脊髄
+		Chest,// 胸
+		Head, // 頭
+		Arml, // 左腕
+		ArmR, // 右腕
+		Hip,  // 尻
+		LegL, // 左足
+		LegR  // 右足
+
+	};
+
+	// メンバ関数
 	/// <summary>
 	/// コンストクラタ
 	/// </summary>
