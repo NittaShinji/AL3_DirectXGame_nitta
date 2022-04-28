@@ -1,7 +1,6 @@
 ﻿#include "GameScene.h"
 #include "TextureManager.h"
 #include <cassert>
-#include <random>
 
 using namespace DirectX;
 
@@ -19,105 +18,127 @@ void GameScene::Initialize() {
 	//ファイル名を指定してテクスチャを読み込む
 	textureHandle_ = TextureManager::Load("mario.jpg");
 
-	//3Dモデルの生成
+	// 3Dモデルの生成
 	model_ = Model::Create();
 
-	//乱数シード生成器
-	std::random_device seed_gen;
+	////乱数シード生成器
+	//std::random_device seed_gen;
 
-	//メルセンヌ・ツイスター
-	std::mt19937_64 engine(seed_gen());
+	////メルセンヌ・ツイスター
+	//std::mt19937_64 engine(seed_gen());
 
-	//乱数範囲(回転角用)
-	std::uniform_real_distribution<float> rotDist(0.0f, XM_2PI);
-	//乱数範囲(座標用)
-	std::uniform_real_distribution<float> posDist(-10.0f, 10.0f);
+	////乱数範囲(回転角用)
+	//std::uniform_real_distribution<float> rotDist(0.0f, XM_2PI);
+	////乱数範囲(座標用)
+	//std::uniform_real_distribution<float> posDist(-10.0f, 10.0f);
 
-	for (size_t i = 0; i < _countof(worldTransform_); i++) {
+	// X,Y,Z 方向のスケーリングを設定
 
-		// X,Y,Z 方向のスケーリングを設定
+	//親
+	// X,Y,Z 方向のスケーリングを設定
+	worldTransform_[0].scale_ = {1.0f, 1.0f, 1.0f};
+	// X,Y,Z 軸回りの回転角を設定
+	worldTransform_[0].rotation_ = {0.0f, 0.0f, 0.0f};
+	// X,Y,Z 軸回りの平行移動を設定
+	worldTransform_[0].translation_ = {0.0f, 0.0f, 3.0f};
+	
+
+	for (int i = 1; i < _countof(worldTransform_); i++) 
+	{
 		worldTransform_[i].scale_ = {1.0f, 1.0f, 1.0f};
-
 		// X,Y,Z 軸回りの回転角を設定
-		worldTransform_[i].rotation_ = {rotDist(engine), rotDist(engine), rotDist(engine)};
-
+		worldTransform_[i].rotation_ = {0.0f, 0.0f, 0.0f};
 		// X,Y,Z 軸回りの平行移動を設定
-		worldTransform_[i].translation_ = {posDist(engine), posDist(engine), posDist(engine)};
-
-		//ワールドトランスフォームの初期化
+		worldTransform_[i].translation_ = {0.0f, 0.0f, 3.0f};
+		
 		worldTransform_[i].Initialize();
 	}
 
+	worldTransform_[PartID::Center].Initialize();
+
+	worldTransform_[PartID::Right].translation_ = {3.0f, 0.0f, 0.0f};
+	worldTransform_[PartID::Right].parent_ = &worldTransform_[PartID::Center];
+	worldTransform_[PartID::Right].Initialize();
+
+	worldTransform_[PartID::Left].translation_ = {-3.0f, 0.0f, 0.0f};
+	worldTransform_[PartID::Left].parent_ = &worldTransform_[PartID::Center];
+	worldTransform_[PartID::Left].Initialize();
+
+	worldTransform_[PartID::Up].translation_ = {0.0f, 3.0f, 0.0f};
+	worldTransform_[PartID::Up].parent_ = &worldTransform_[PartID::Center];
+	worldTransform_[PartID::Up].Initialize();
+
+	worldTransform_[PartID::Down].translation_ = {0.0f, -3.0f, 0.0f};
+	worldTransform_[PartID::Down].parent_ = &worldTransform_[PartID::Center];
+	worldTransform_[PartID::Down].Initialize();
+
+
 	//	カメラ視点座標を設定
-	viewProjection_.eye = {0, 0, -50};
+	viewProjection_.eye = {0.0f, 0.0f, -30};
 
 	//　カメラ注視点座標を設定
-	viewProjection_.target = {10,0,0};
-
-	//カメラ上方向ベクトルを設定(右上45度指定)
-	viewProjection_.up = {cosf(XM_PI / 4.0f), sinf(XM_PI / 4.0f), 0.0f};
+	viewProjection_.target = {0.0f, 0.0f, 0.0f};
 
 	//ビュープロジェクションの初期化
 	viewProjection_.Initialize();
-
 }
 
 void GameScene::Update() {
 
-	//視点移動の処理
-	XMFLOAT3 eyeMove = {0, 0, 0};
+	//回転移動の単位ベクトル
+	XMFLOAT3 rotate = {0, 0, 1};
 
-	//　視点移動の速さ
-	const float kEyeSpeed = 0.2f;
+	//回転移動の速さ
+	const float rotateSpeed = 0.1f;
+
+	if (input_->PushKey(DIK_LEFT))	//左キーを押して左回転
+	{
+		rotate = {0.0f, rotateSpeed, 0.0f};
+		worldTransform_[0].rotation_.x += rotate.x;
+		worldTransform_[0].rotation_.y += rotate.y;
+		worldTransform_[0].rotation_.z += rotate.z;
+	}
+	else if (input_->PushKey(DIK_RIGHT)) //右キーを押して右回転
+	{
+		rotate = {0.0f, -rotateSpeed, 0.0f};
+		worldTransform_[0].rotation_.x += rotate.x;
+		worldTransform_[0].rotation_.y += rotate.y;
+		worldTransform_[0].rotation_.z += rotate.z;
+	}
+
+	//演算ベクトル
+	XMFLOAT3 resultVec = {0, 0, 0};
+	
+	//回転移動後の座標計算
+	resultVec.x = cosf(worldTransform_[PartID::Center].rotation_.y) * rotate.x +
+	              sinf(worldTransform_[PartID::Center].rotation_.y) * rotate.z;
+	resultVec.z = -sinf(worldTransform_[PartID::Center].rotation_.y) * rotate.x +
+	              cosf(worldTransform_[PartID::Center].rotation_.y) * rotate.z;
+
+	//キャラクターの移動速さ
+	const float kCharacterSpeed = 0.2f;
 
 	//押した方向で移動ベクトルを変更
 	if (input_->PushKey(DIK_W)) {
-		eyeMove = {0, 0, kEyeSpeed};
-	} else if (input_->PushKey(DIK_S)) {
-		eyeMove = {0, 0, -kEyeSpeed};
+		worldTransform_[0].translation_.x += (resultVec.x * kCharacterSpeed);
+		worldTransform_[0].translation_.z += (resultVec.z * kCharacterSpeed);
 	}
 
-	//　視点移動(ベクトルの加算)
-	viewProjection_.eye.x += eyeMove.x;
-	viewProjection_.eye.y += eyeMove.y;
-	viewProjection_.eye.z += eyeMove.z;
-
-	//注視点移動処理
-	
-	//注視点の移動ベクトル
-	XMFLOAT3 tagetMove = {0, 0, 0};
-
-	//注視点移動の速さ
-	const float kTragetSpeed = 0.2f;
-
-	//押した方向で移動ベクトルを変更
-	if (input_->PushKey(DIK_LEFT)) {
-		tagetMove = {-kTragetSpeed, 0, 0};
-	} else if (input_->PushKey(DIK_RIGHT)) {
-		tagetMove = {kTragetSpeed, 0, 0};
+	if (input_->PushKey(DIK_S)) {
+		worldTransform_[0].translation_.x -= (resultVec.x * kCharacterSpeed);
+		worldTransform_[0].translation_.z -= (resultVec.z * kCharacterSpeed);
 	}
 
-	//注視点移動
-	viewProjection_.target.x += tagetMove.x;
-	viewProjection_.target.y += tagetMove.y;
-	viewProjection_.target.z += tagetMove.z;
+	//自機の行列の再計算
+	worldTransform_[0].UpdateMatrix();
 
-	//上方向回転処理
-
-	//上方向の回転速さ[ラジアン/frame]
-	const float kUpRotSpeed = 0.05;
-	//押した方向で移動ベクトルを変更
-	if (input_->PushKey(DIK_SPACE)) 
+	for (int i = 1; i < _countof(worldTransform_); i++)
 	{
-		viewAngle += kUpRotSpeed;
+		worldTransform_[i].UpdateMatrix();
 	}
-
-	//上方向ベクトルを計算(半径1の円周上の座標)
-	viewProjection_.up = {cosf(viewAngle), sinf(viewAngle), 0.0f};
 
 	//行列の再計算
 	viewProjection_.UpdateMatrix();
-
 }
 
 void GameScene::Draw() {
@@ -146,13 +167,12 @@ void GameScene::Draw() {
 	/// <summary>
 	/// ここに3Dオブジェクトの描画処理を追加できる
 	/// </summary>
-	 
-	for (size_t i = 0; i < _countof(worldTransform_); i++) {
 
-		// 3Dモデル描画
+	// 3Dモデル描画
+	for (int i = 0; i < _countof(worldTransform_); i++) {
+
 		model_->Draw(worldTransform_[i], viewProjection_, textureHandle_);
 	}
-	
 	// 3Dオブジェクト描画後処理
 	Model::PostDraw();
 #pragma endregion
@@ -183,8 +203,6 @@ void GameScene::Draw() {
 	debugText_->SetPos(50, 90);
 	debugText_->Printf(
 	  "up:(%f,%f,%f)", viewProjection_.up.x, viewProjection_.up.y, viewProjection_.up.z);
-
-	
 
 	/*debugText_->SetPos(50, 70);
 	debugText_->Printf("translation:(%f,%f,%f)", 10.0f, 10.0f, 10.0f);

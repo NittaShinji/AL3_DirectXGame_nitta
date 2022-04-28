@@ -14,7 +14,18 @@
 /// <summary>
 /// ゲームシーン
 /// </summary>
-class GameScene {
+class GameScene 
+{
+
+	enum PartID 
+	{
+		Center,
+		Right,
+		Left,
+		Up,
+		Down,
+
+	};
 
   public: // メンバ関数
 	/// <summary>
@@ -48,7 +59,7 @@ class GameScene {
 	Audio* audio_ = nullptr;
 	DebugText* debugText_ = nullptr;
 
-	float viewAngle = 0.0f;
+	float viewAngle = 1.0f;
 
 	//3Dモデル
 	Model* model_ = nullptr;
@@ -57,12 +68,9 @@ class GameScene {
 	uint32_t textureHandle_ = 0;
 
 	//ワールドトランスフォーム
-	WorldTransform worldTransform_[100];
+	WorldTransform worldTransform_[5];
 	//ビュープロジェクション
 	ViewProjection viewProjection_;
-
-
-
 
 	/// <summary>
 	/// ゲームシーン用
