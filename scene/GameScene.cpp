@@ -42,8 +42,7 @@ void GameScene::Initialize() {
 	// X,Y,Z 軸回りの平行移動を設定
 	worldTransform_[0].translation_ = {0.0f, 0.0f, 3.0f};
 	
-
-	for (int i = 1; i < _countof(worldTransform_); i++) 
+	for (int i = 1; i < 5; i++) 
 	{
 		worldTransform_[i].scale_ = {1.0f, 1.0f, 1.0f};
 		// X,Y,Z 軸回りの回転角を設定
@@ -53,6 +52,14 @@ void GameScene::Initialize() {
 		
 		worldTransform_[i].Initialize();
 	}
+
+	worldTransform_[5].scale_ = {1.0f, 1.0f, 1.0f};
+	// X,Y,Z 軸回りの回転角を設定
+	worldTransform_[5].rotation_ = {0.0f, 0.0f, 0.0f};
+	// X,Y,Z 軸回りの平行移動を設定
+	worldTransform_[5].translation_ = {10.0f, 0.0f, 3.0f};
+	
+	worldTransform_[5].Initialize();
 
 	worldTransform_[PartID::Center].Initialize();
 
@@ -72,12 +79,12 @@ void GameScene::Initialize() {
 	worldTransform_[PartID::Down].parent_ = &worldTransform_[PartID::Center];
 	worldTransform_[PartID::Down].Initialize();
 
+	//カメラ視点座標を設定
+	//viewProjection_.eye = {0.0f, 0.0f, 0.0f};
 
-	//	カメラ視点座標を設定
-	viewProjection_.eye = {0.0f, 0.0f, -30};
-
-	//　カメラ注視点座標を設定
-	viewProjection_.target = {0.0f, 0.0f, 0.0f};
+	//カメラ注視点座標を設定
+	//viewProjection_.target = {0.0f, 0.0f, 0.0f};
+	//viewProjection_.target = {worldTransform_[0].rotation_.x, 0.0f, 0.0f};
 
 	//ビュープロジェクションの初期化
 	viewProjection_.Initialize();
@@ -85,35 +92,31 @@ void GameScene::Initialize() {
 
 void GameScene::Update() {
 
-	//回転移動の単位ベクトル
-	XMFLOAT3 rotate = {0, 0, 1};
-
 	//回転移動の速さ
 	const float rotateSpeed = 0.1f;
 
 	if (input_->PushKey(DIK_LEFT))	//左キーを押して左回転
 	{
-		rotate = {0.0f, rotateSpeed, 0.0f};
-		worldTransform_[0].rotation_.x += rotate.x;
-		worldTransform_[0].rotation_.y += rotate.y;
-		worldTransform_[0].rotation_.z += rotate.z;
+		worldTransform_[0].rotation_.y += 0.1f;
 	}
 	else if (input_->PushKey(DIK_RIGHT)) //右キーを押して右回転
 	{
-		rotate = {0.0f, -rotateSpeed, 0.0f};
-		worldTransform_[0].rotation_.x += rotate.x;
-		worldTransform_[0].rotation_.y += rotate.y;
-		worldTransform_[0].rotation_.z += rotate.z;
+		worldTransform_[0].rotation_.y -= 0.1f;
 	}
+
+	//回転移動の単位ベクトル
+	XMFLOAT3 frontVec = {0, 0, 1};
 
 	//演算ベクトル
 	XMFLOAT3 resultVec = {0, 0, 0};
+
+	//注視点ベクトルをどうするかで決まる。
 	
 	//回転移動後の座標計算
-	resultVec.x = cosf(worldTransform_[PartID::Center].rotation_.y) * rotate.x +
-	              sinf(worldTransform_[PartID::Center].rotation_.y) * rotate.z;
-	resultVec.z = -sinf(worldTransform_[PartID::Center].rotation_.y) * rotate.x +
-	              cosf(worldTransform_[PartID::Center].rotation_.y) * rotate.z;
+	resultVec.x = cosf(worldTransform_[PartID::Center].rotation_.y) * frontVec.x +
+	              sinf(worldTransform_[PartID::Center].rotation_.y) * frontVec.z;
+	resultVec.z = -sinf(worldTransform_[PartID::Center].rotation_.y) * frontVec.x +
+	              cosf(worldTransform_[PartID::Center].rotation_.y) * frontVec.z;
 
 	//キャラクターの移動速さ
 	const float kCharacterSpeed = 0.2f;
@@ -129,13 +132,28 @@ void GameScene::Update() {
 		worldTransform_[0].translation_.z -= (resultVec.z * kCharacterSpeed);
 	}
 
-	//自機の行列の再計算
+	//親の行列の再計算
 	worldTransform_[0].UpdateMatrix();
 
+	//子の行列の再計算
 	for (int i = 1; i < _countof(worldTransform_); i++)
 	{
 		worldTransform_[i].UpdateMatrix();
 	}
+
+	//カメラベクトルの作成
+	XMFLOAT3 cameraVec = {resultVec.x, 0, resultVec.z};
+
+	//オブジェクトとの距離
+	float cameraDistance = 30.0f;
+
+	//カメラ座標の計算
+	viewProjection_.eye.x = worldTransform_[0].translation_.x + cameraDistance * cameraVec.x;
+	viewProjection_.eye.y = worldTransform_[0].translation_.y + cameraDistance * cameraVec.y;
+	viewProjection_.eye.z = worldTransform_[0].translation_.z + cameraDistance * cameraVec.z;
+
+	//注視点座標の設定
+	viewProjection_.target = worldTransform_[0].translation_;
 
 	//行列の再計算
 	viewProjection_.UpdateMatrix();
